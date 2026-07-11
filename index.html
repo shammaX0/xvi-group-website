@@ -866,5 +866,352 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 })();
 </script>
 
+
+<!-- ============ SHAMMA CHATBOT ============ -->
+<style>
+/* ---- FAB button ---- */
+#shammaFab{position:fixed;left:24px;bottom:24px;z-index:9500;width:64px;height:64px;border:none;border-radius:50%;
+  background:var(--grad);color:#fff;cursor:pointer;box-shadow:0 12px 34px rgba(124,58,237,.55),0 0 0 1px rgba(168,85,247,.35) inset;
+  display:grid;place-items:center;transition:transform .35s var(--ease),box-shadow .35s var(--ease)}
+#shammaFab:hover{transform:translateY(-4px) scale(1.05);box-shadow:0 18px 44px rgba(124,58,237,.7)}
+#shammaFab::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(168,85,247,.5);animation:shammaPulse 2.4s var(--ease) infinite}
+@keyframes shammaPulse{0%{transform:scale(1);opacity:.7}70%{transform:scale(1.35);opacity:0}100%{opacity:0}}
+#shammaFab .ico-chat,#shammaFab .ico-close{position:absolute;transition:opacity .3s,transform .3s}
+#shammaFab .ico-close{opacity:0;transform:rotate(-90deg) scale(.6)}
+body.shamma-open #shammaFab .ico-chat{opacity:0;transform:rotate(90deg) scale(.6)}
+body.shamma-open #shammaFab .ico-close{opacity:1;transform:rotate(0) scale(1)}
+body.shamma-open #shammaFab::after{display:none}
+#shammaBadge{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 5px;border-radius:12px;background:var(--cyan);
+  color:#04121a;font:700 12px/20px 'Poppins',sans-serif;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+body.shamma-open #shammaBadge{display:none}
+
+/* ---- Panel ---- */
+#shammaPanel{position:fixed;left:24px;bottom:100px;z-index:9500;width:min(376px,calc(100vw - 32px));height:min(560px,calc(100vh - 130px));
+  background:linear-gradient(180deg,#0d0c26,#0a0920);border:1px solid rgba(168,85,247,.28);border-radius:22px;
+  box-shadow:0 26px 70px rgba(0,0,0,.6),0 0 0 1px rgba(124,58,237,.15) inset;display:flex;flex-direction:column;overflow:hidden;
+  opacity:0;visibility:hidden;transform:translateY(24px) scale(.96);transform-origin:left bottom;
+  transition:opacity .34s var(--ease),transform .34s var(--ease),visibility .34s}
+body.shamma-open #shammaPanel{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
+
+/* ---- Header ---- */
+.shamma-head{display:flex;align-items:center;gap:12px;padding:15px 16px;background:var(--grad);position:relative}
+.shamma-ava{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.16);display:grid;place-items:center;
+  font:800 20px/1 'Tajawal',sans-serif;color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+.shamma-head .nm{font:800 18px/1.1 'Poppins',sans-serif;color:#fff;letter-spacing:.02em}
+.shamma-head .st{display:block;font:500 12px/1.3 'IBM Plex Sans Arabic',sans-serif;color:rgba(255,255,255,.85);margin-top:3px}
+.shamma-head .online{display:inline-block;width:8px;height:8px;border-radius:50%;background:#4ade80;margin-inline-end:5px;vertical-align:middle;box-shadow:0 0 6px #4ade80}
+#shammaClose{margin-inline-start:auto;background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;
+  cursor:pointer;font-size:20px;line-height:1;display:grid;place-items:center;transition:background .25s}
+#shammaClose:hover{background:rgba(255,255,255,.3)}
+
+/* ---- Messages ---- */
+#shammaMsgs{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
+#shammaMsgs::-webkit-scrollbar{width:6px}
+#shammaMsgs::-webkit-scrollbar-thumb{background:rgba(124,58,237,.5);border-radius:6px}
+.sh-row{display:flex;gap:8px;max-width:88%;animation:shIn .3s var(--ease)}
+@keyframes shIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.sh-row.bot{align-self:flex-start}
+.sh-row.user{align-self:flex-end;flex-direction:row-reverse}
+.sh-bub{padding:10px 13px;border-radius:16px;font-size:14.5px;line-height:1.7;word-wrap:break-word}
+.sh-row.bot .sh-bub{background:#16143a;color:var(--light-2);border:1px solid rgba(168,85,247,.2);border-bottom-inline-start-radius:5px}
+.sh-row.user .sh-bub{background:var(--grad);color:#fff;border-bottom-inline-end-radius:5px}
+.sh-mini{width:28px;height:28px;border-radius:50%;background:var(--grad-2);display:grid;place-items:center;flex-shrink:0;
+  font:800 13px/1 'Tajawal',sans-serif;color:#04121a}
+.sh-typing{display:flex;gap:4px;padding:12px 14px;background:#16143a;border-radius:16px;border-bottom-inline-start-radius:5px;width:fit-content}
+.sh-typing span{width:7px;height:7px;border-radius:50%;background:var(--violet-2);animation:shBlink 1.2s infinite}
+.sh-typing span:nth-child(2){animation-delay:.2s}.sh-typing span:nth-child(3){animation-delay:.4s}
+@keyframes shBlink{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+
+/* ---- Chips ---- */
+.shamma-chips{display:flex;gap:8px;padding:10px 12px 4px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+.shamma-chips::-webkit-scrollbar{display:none}
+.sh-chip{white-space:nowrap;padding:7px 13px;border-radius:20px;border:1px solid rgba(168,85,247,.4);background:rgba(124,58,237,.12);
+  color:var(--light-2);font-size:12.5px;cursor:pointer;transition:background .2s,transform .2s;flex-shrink:0}
+.sh-chip:hover{background:rgba(124,58,237,.32);transform:translateY(-2px)}
+
+/* ---- Input ---- */
+.shamma-input{display:flex;gap:8px;padding:12px;border-top:1px solid rgba(168,85,247,.18);background:#0b0a20}
+.shamma-input input{flex:1;background:#151338;border:1px solid rgba(168,85,247,.28);border-radius:22px;padding:11px 16px;
+  color:var(--light);font-family:inherit;font-size:14px;outline:none;transition:border-color .25s}
+.shamma-input input:focus{border-color:var(--violet-2)}
+.shamma-input input::placeholder{color:var(--muted-d)}
+#shammaSend{width:44px;height:44px;flex-shrink:0;border:none;border-radius:50%;background:var(--grad);color:#fff;cursor:pointer;
+  display:grid;place-items:center;transition:transform .25s,box-shadow .25s}
+#shammaSend:hover{transform:scale(1.08);box-shadow:0 0 18px rgba(124,58,237,.6)}
+body[data-lang="ar"] #shammaSend svg{transform:scaleX(-1)}
+
+@media (max-width:480px){
+  #shammaPanel{left:8px;right:8px;bottom:92px;width:auto;height:min(70vh,540px)}
+  #shammaFab{left:16px;bottom:16px}
+}
+</style>
+
+<!-- FAB -->
+<button id="shammaFab" aria-label="افتح محادثة shamma">
+  <span id="shammaBadge">1</span>
+  <svg class="ico-chat" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+  <svg class="ico-close" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+</button>
+
+<!-- Panel -->
+<div id="shammaPanel" role="dialog" aria-label="shamma chatbot">
+  <div class="shamma-head">
+    <div class="shamma-ava">ش</div>
+    <div>
+      <span class="nm">shamma</span>
+      <span class="st"><span class="online"></span><span data-ar="مساعد XVI الذكي · متصل الآن" data-en="XVI Smart Assistant · Online"></span></span>
+    </div>
+    <button id="shammaClose" aria-label="إغلاق">&times;</button>
+  </div>
+  <div id="shammaMsgs"></div>
+  <div class="shamma-chips" id="shammaChips"></div>
+  <div class="shamma-input">
+    <input id="shammaInput" type="text" data-ar-ph="اكتب سؤالك هنا…" data-en-ph="Type your question…" autocomplete="off">
+    <button id="shammaSend" aria-label="إرسال">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* ===== 100 Q&A knowledge base ===== */
+  var QA=[
+    // ---------- AI knowledge (1-55) ----------
+    {q_ar:"ما هو الذكاء الاصطناعي؟",q_en:"What is Artificial Intelligence?",a_ar:"الذكاء الاصطناعي (AI) هو فرع من علوم الحاسب يمكّن الأنظمة من محاكاة القدرات الذهنية البشرية مثل التعلّم والاستنتاج واتخاذ القرار.",a_en:"Artificial Intelligence (AI) is a branch of computer science that enables systems to mimic human abilities such as learning, reasoning and decision-making.",kw:"ai ذكاء اصطناعي artificial intelligence"},
+    {q_ar:"ما هو تعلّم الآلة؟",q_en:"What is Machine Learning?",a_ar:"تعلّم الآلة (ML) هو فرع من الذكاء الاصطناعي تتعلّم فيه الأنظمة من البيانات وتُحسّن أداءها تلقائياً دون برمجة صريحة لكل حالة.",a_en:"Machine Learning (ML) is a subset of AI where systems learn from data and improve automatically without being explicitly programmed for every case.",kw:"machine learning تعلم الاله ml"},
+    {q_ar:"ما هو التعلّم العميق؟",q_en:"What is Deep Learning?",a_ar:"التعلّم العميق نوع من تعلّم الآلة يعتمد على شبكات عصبية متعددة الطبقات لتحليل البيانات المعقّدة كالصور والصوت والنصوص.",a_en:"Deep Learning is a type of machine learning that uses multi-layered neural networks to analyze complex data such as images, audio and text.",kw:"deep learning تعلم عميق"},
+    {q_ar:"ما هي الشبكة العصبية؟",q_en:"What is a Neural Network?",a_ar:"الشبكة العصبية نموذج حوسبي مستوحى من دماغ الإنسان، يتكوّن من عُقد مترابطة (خلايا) تعالج المعلومات وتكتشف الأنماط.",a_en:"A neural network is a computing model inspired by the human brain, made of interconnected nodes (neurons) that process information and detect patterns.",kw:"neural network شبكة عصبية"},
+    {q_ar:"ما هي معالجة اللغة الطبيعية؟",q_en:"What is Natural Language Processing (NLP)?",a_ar:"معالجة اللغة الطبيعية (NLP) مجال يمكّن الحاسوب من فهم اللغة البشرية وتحليلها وتوليدها، وهو أساس المساعدين والمترجمات الآلية.",a_en:"Natural Language Processing (NLP) lets computers understand, analyze and generate human language — the basis of assistants and machine translation.",kw:"nlp لغة طبيعية natural language"},
+    {q_ar:"ما هو الذكاء الاصطناعي التوليدي؟",q_en:"What is Generative AI?",a_ar:"الذكاء الاصطناعي التوليدي ينشئ محتوى جديداً كالنصوص والصور والصوت والكود، اعتماداً على أنماط تعلّمها من كميات هائلة من البيانات.",a_en:"Generative AI creates new content — text, images, audio, code — based on patterns learned from vast amounts of data.",kw:"generative توليدي gen ai"},
+    {q_ar:"ما هو النموذج اللغوي الكبير (LLM)؟",q_en:"What is a Large Language Model (LLM)?",a_ar:"النموذج اللغوي الكبير (LLM) نموذج ذكاء اصطناعي دُرّب على كميات ضخمة من النصوص ليفهم اللغة ويولّدها، مثل النماذج التي تشغّل روبوتات الدردشة.",a_en:"A Large Language Model (LLM) is an AI trained on massive text data to understand and generate language, like the models powering chatbots.",kw:"llm نموذج لغوي large language model gpt"},
+    {q_ar:"ما هي روبوتات الدردشة الذكية؟",q_en:"What are AI chatbots?",a_ar:"روبوتات الدردشة الذكية برامج تحاكي المحادثة البشرية للإجابة عن الأسئلة وتقديم الدعم آلياً على مدار الساعة — تماماً مثلي أنا shamma!",a_en:"AI chatbots are programs that simulate human conversation to answer questions and provide support 24/7 — just like me, shamma!",kw:"chatbot دردشة محادثة conversational"},
+    {q_ar:"ما هي هندسة الأوامر (Prompt Engineering)؟",q_en:"What is Prompt Engineering?",a_ar:"هندسة الأوامر هي فن صياغة التعليمات المُدخلة لنماذج الذكاء الاصطناعي بدقّة للحصول على أفضل وأدق النتائج.",a_en:"Prompt engineering is the craft of writing precise instructions for AI models to get the best and most accurate results.",kw:"prompt هندسة الاوامر برومبت"},
+    {q_ar:"ما هي الرؤية الحاسوبية؟",q_en:"What is Computer Vision?",a_ar:"الرؤية الحاسوبية مجال يمكّن الأنظمة من فهم الصور والفيديو وتحليلها، مثل التعرّف على الوجوه واكتشاف الأجسام.",a_en:"Computer Vision enables systems to understand and analyze images and video, such as face recognition and object detection.",kw:"computer vision رؤية حاسوبية صور"},
+    {q_ar:"ما هو التعلّم المُوجّه (Supervised)؟",q_en:"What is Supervised Learning?",a_ar:"التعلّم المُوجّه يدرّب النموذج على بيانات مُصنّفة (مدخلات ومخرجات معروفة) ليتعلّم التنبؤ بالنتائج الصحيحة.",a_en:"Supervised learning trains a model on labeled data (known inputs and outputs) so it learns to predict correct results.",kw:"supervised تعلم موجه مصنف"},
+    {q_ar:"ما هو التعلّم غير المُوجّه؟",q_en:"What is Unsupervised Learning?",a_ar:"التعلّم غير المُوجّه يكتشف الأنماط والتجمّعات في بيانات غير مُصنّفة دون إجابات مسبقة، مثل تقسيم العملاء لشرائح.",a_en:"Unsupervised learning finds patterns and clusters in unlabeled data without predefined answers, like segmenting customers.",kw:"unsupervised غير موجه تجميع clustering"},
+    {q_ar:"ما هو التعلّم المعزّز؟",q_en:"What is Reinforcement Learning?",a_ar:"التعلّم المعزّز يدرّب النموذج عبر التجربة والخطأ، حيث يتلقّى مكافآت أو عقوبات ليتعلّم أفضل سلوك لتحقيق هدف.",a_en:"Reinforcement learning trains a model by trial and error, receiving rewards or penalties to learn the best behavior toward a goal.",kw:"reinforcement تعلم معزز"},
+    {q_ar:"ما الفرق بين الذكاء الاصطناعي وتعلّم الآلة؟",q_en:"What's the difference between AI and ML?",a_ar:"الذكاء الاصطناعي هو المفهوم الأشمل لمحاكاة الذكاء البشري، بينما تعلّم الآلة أحد أساليبه التي تجعل الأنظمة تتعلّم من البيانات.",a_en:"AI is the broad concept of simulating human intelligence, while ML is one of its techniques that makes systems learn from data.",kw:"difference فرق ai ml"},
+    {q_ar:"ما هو علم البيانات؟",q_en:"What is Data Science?",a_ar:"علم البيانات مجال يجمع بين الإحصاء والبرمجة والذكاء الاصطناعي لاستخلاص رؤى قيّمة من البيانات ودعم اتخاذ القرار.",a_en:"Data Science combines statistics, programming and AI to extract valuable insights from data and support decision-making.",kw:"data science علم البيانات"},
+    {q_ar:"ما هي البيانات الضخمة (Big Data)؟",q_en:"What is Big Data?",a_ar:"البيانات الضخمة تصف كميات هائلة ومتنوّعة وسريعة من البيانات يصعب معالجتها بالطرق التقليدية، وتُعدّ وقوداً للذكاء الاصطناعي.",a_en:"Big Data describes huge, varied and fast-moving data that traditional methods struggle to handle — the fuel for AI.",kw:"big data بيانات ضخمة"},
+    {q_ar:"ما هي الأتمتة (Automation)؟",q_en:"What is Automation?",a_ar:"الأتمتة تعني استخدام التقنية لتنفيذ المهام المتكرّرة تلقائياً دون تدخّل بشري، ما يوفّر الوقت ويقلّل الأخطاء ويرفع الكفاءة.",a_en:"Automation uses technology to perform repetitive tasks automatically without human intervention, saving time, reducing errors and boosting efficiency.",kw:"automation اتمتة rpa"},
+    {q_ar:"ما هي التحليلات التنبؤية؟",q_en:"What is Predictive Analytics?",a_ar:"التحليلات التنبؤية تستخدم البيانات التاريخية والذكاء الاصطناعي للتنبؤ بالأحداث المستقبلية، مثل توقّع الطلب أو سلوك العملاء.",a_en:"Predictive analytics uses historical data and AI to forecast future events, such as demand or customer behavior.",kw:"predictive تنبؤية توقع forecast"},
+    {q_ar:"ما هي أنظمة التوصية؟",q_en:"What are Recommendation Systems?",a_ar:"أنظمة التوصية تقترح منتجات أو محتوى مناسباً لكل مستخدم بناءً على سلوكه واهتماماته، كما في منصّات التسوّق والبث.",a_en:"Recommendation systems suggest relevant products or content for each user based on their behavior and interests, as in shopping and streaming platforms.",kw:"recommendation توصية اقتراح"},
+    {q_ar:"كيف يُستخدم الذكاء الاصطناعي في الرعاية الصحية؟",q_en:"How is AI used in healthcare?",a_ar:"في الرعاية الصحية يساعد الذكاء الاصطناعي في تشخيص الأمراض مبكّراً، وتحليل الصور الطبية، وتخصيص العلاج، وتسريع اكتشاف الأدوية.",a_en:"In healthcare, AI helps with early disease diagnosis, medical image analysis, personalized treatment and faster drug discovery.",kw:"healthcare صحة طبي رعاية"},
+    {q_ar:"كيف يفيد الذكاء الاصطناعي الأعمال؟",q_en:"How does AI benefit businesses?",a_ar:"يساعد الذكاء الاصطناعي الشركات على أتمتة العمليات، وتحليل البيانات، وتحسين تجربة العملاء، واتخاذ قرارات أذكى وأسرع تزيد الأرباح.",a_en:"AI helps businesses automate processes, analyze data, improve customer experience and make smarter, faster decisions that grow profit.",kw:"business اعمال شركات فوائد"},
+    {q_ar:"كيف يُستخدم الذكاء الاصطناعي في التسويق؟",q_en:"How is AI used in marketing?",a_ar:"في التسويق يخصّص الذكاء الاصطناعي الحملات، ويحلّل سلوك العملاء، ويتنبّأ بالاتجاهات، ويؤتمت المحتوى لزيادة العائد على الإنفاق.",a_en:"In marketing, AI personalizes campaigns, analyzes customer behavior, predicts trends and automates content to increase return on spend.",kw:"marketing تسويق حملات"},
+    {q_ar:"كيف يُستخدم الذكاء الاصطناعي في التمويل؟",q_en:"How is AI used in finance?",a_ar:"في التمويل يكشف الذكاء الاصطناعي الاحتيال، ويقيّم المخاطر، ويؤتمت التداول، ويحسّن خدمة العملاء عبر المساعدين الآليين.",a_en:"In finance, AI detects fraud, assesses risk, automates trading and improves customer service through virtual assistants.",kw:"finance تمويل مالي بنوك"},
+    {q_ar:"كيف يُستخدم الذكاء الاصطناعي في التعليم؟",q_en:"How is AI used in education?",a_ar:"في التعليم يوفّر الذكاء الاصطناعي تعلّماً مخصّصاً لكل طالب، وتصحيحاً آلياً، ومساعدين تعليميين، وتحليلاً لأداء المتعلّمين.",a_en:"In education, AI enables personalized learning, automated grading, tutoring assistants and analytics on learner performance.",kw:"education تعليم تعلم"},
+    {q_ar:"ما هي أخلاقيات الذكاء الاصطناعي؟",q_en:"What is AI Ethics?",a_ar:"أخلاقيات الذكاء الاصطناعي مبادئ تضمن استخدامه بعدل وشفافية وأمان، مع احترام الخصوصية وتجنّب التحيّز والأضرار.",a_en:"AI ethics are principles ensuring AI is used fairly, transparently and safely, respecting privacy and avoiding bias and harm.",kw:"ethics اخلاقيات"},
+    {q_ar:"ما هو التحيّز في الذكاء الاصطناعي؟",q_en:"What is bias in AI?",a_ar:"التحيّز يحدث عندما تنتج النماذج نتائج غير عادلة بسبب بيانات تدريب منحازة؛ لذلك تُعدّ جودة البيانات وتنوّعها أمراً حاسماً.",a_en:"Bias occurs when models produce unfair results due to skewed training data; that's why data quality and diversity are crucial.",kw:"bias تحيز"},
+    {q_ar:"هل الذكاء الاصطناعي يحترم الخصوصية؟",q_en:"Does AI respect privacy?",a_ar:"يعتمد ذلك على التصميم؛ الأنظمة المسؤولة تحمي البيانات، وتلتزم بالقوانين كـ GDPR، وتستخدم تقنيات لحماية خصوصية المستخدمين.",a_en:"It depends on design; responsible systems protect data, comply with laws like GDPR and use techniques that safeguard user privacy.",kw:"privacy خصوصية بيانات gdpr"},
+    {q_ar:"هل سيحلّ الذكاء الاصطناعي محلّ الوظائف؟",q_en:"Will AI replace jobs?",a_ar:"سيغيّر الذكاء الاصطناعي طبيعة الوظائف أكثر من إلغائها؛ فهو يؤتمت المهام المتكرّرة ويخلق أدواراً جديدة تتطلّب مهارات متقدّمة.",a_en:"AI will transform jobs more than eliminate them; it automates repetitive tasks and creates new roles requiring advanced skills.",kw:"jobs وظائف عمل استبدال replace"},
+    {q_ar:"هل الذكاء الاصطناعي آمن؟",q_en:"Is AI safe?",a_ar:"الذكاء الاصطناعي آمن عند تصميمه ومراقبته بمسؤولية، مع ضوابط للحوكمة والشفافية؛ وهذا ما نحرص عليه في XVI.",a_en:"AI is safe when designed and monitored responsibly, with governance and transparency controls — a priority we uphold at XVI.",kw:"safe امان امن"},
+    {q_ar:"ما هو الذكاء الاصطناعي العام (AGI)؟",q_en:"What is Artificial General Intelligence (AGI)?",a_ar:"الذكاء الاصطناعي العام هو مستوى افتراضي يمكن فيه للآلة أداء أي مهمة ذهنية بمستوى الإنسان؛ وهو لم يتحقّق بعد.",a_en:"AGI is a hypothetical level where a machine can perform any intellectual task at a human level; it has not been achieved yet.",kw:"agi ذكاء عام general intelligence"},
+    {q_ar:"ما هي بيانات التدريب؟",q_en:"What is training data?",a_ar:"بيانات التدريب هي الأمثلة التي يتعلّم منها نموذج الذكاء الاصطناعي؛ وكلّما كانت أكثر جودة وتنوّعاً كان النموذج أدقّ.",a_en:"Training data is the examples an AI model learns from; the higher its quality and diversity, the more accurate the model.",kw:"training data بيانات تدريب"},
+    {q_ar:"ما هي الخوارزمية؟",q_en:"What is an algorithm?",a_ar:"الخوارزمية سلسلة من الخطوات المنطقية التي يتبعها الحاسوب لحلّ مشكلة أو تنفيذ مهمة محدّدة.",a_en:"An algorithm is a set of logical steps a computer follows to solve a problem or perform a specific task.",kw:"algorithm خوارزمية"},
+    {q_ar:"ما هو النموذج (Model) في الذكاء الاصطناعي؟",q_en:"What is a model in AI?",a_ar:"النموذج هو ناتج عملية التدريب؛ برنامج تعلّم الأنماط من البيانات ويستطيع التنبؤ أو اتخاذ قرار عند إعطائه مدخلات جديدة.",a_en:"A model is the output of training; a program that learned patterns from data and can predict or decide when given new inputs.",kw:"model نموذج"},
+    {q_ar:"ما هو الضبط الدقيق (Fine-tuning)؟",q_en:"What is fine-tuning?",a_ar:"الضبط الدقيق هو إعادة تدريب نموذج جاهز على بيانات متخصّصة ليتقن مهمة أو مجالاً معيّناً بدقّة أعلى.",a_en:"Fine-tuning is retraining a pre-built model on specialized data so it masters a specific task or domain more accurately.",kw:"fine tuning ضبط دقيق"},
+    {q_ar:"ما هو التوكن (Token) في النماذج اللغوية؟",q_en:"What is a token in language models?",a_ar:"التوكن هو الوحدة الأساسية للنص التي يعالجها النموذج، وقد يكون كلمة أو جزءاً منها؛ وتُقاس تكلفة النماذج غالباً بعدد التوكنات.",a_en:"A token is the basic unit of text a model processes — a word or part of one; model costs are often measured in tokens.",kw:"token توكن"},
+    {q_ar:"ما هي الهلوسة في الذكاء الاصطناعي؟",q_en:"What is hallucination in AI?",a_ar:"الهلوسة هي أن ينتج النموذج معلومة تبدو مقنعة لكنها غير صحيحة؛ لذلك يبقى التحقّق البشري من المخرجات مهماً.",a_en:"Hallucination is when a model produces convincing but incorrect information; that's why human verification of outputs remains important.",kw:"hallucination هلوسة"},
+    {q_ar:"ما هو التوليد المعزّز بالاسترجاع (RAG)؟",q_en:"What is Retrieval-Augmented Generation (RAG)?",a_ar:"RAG أسلوب يزوّد النموذج بمعلومات من مصادر خارجية موثوقة أثناء التوليد، ما يرفع دقّة الإجابات ويقلّل الهلوسة.",a_en:"RAG feeds a model information from trusted external sources during generation, boosting answer accuracy and reducing hallucination.",kw:"rag استرجاع retrieval"},
+    {q_ar:"ما هو وكيل الذكاء الاصطناعي (AI Agent)؟",q_en:"What is an AI agent?",a_ar:"وكيل الذكاء الاصطناعي نظام يخطّط ويتّخذ خطوات ويستخدم أدوات لإنجاز مهام معقّدة بشكل شبه مستقل نيابة عن المستخدم.",a_en:"An AI agent is a system that plans, takes steps and uses tools to accomplish complex tasks semi-autonomously on the user's behalf.",kw:"agent وكيل ai agent"},
+    {q_ar:"ما هو التعرّف على الكلام؟",q_en:"What is speech recognition?",a_ar:"التعرّف على الكلام تقنية تحوّل الصوت المنطوق إلى نصّ مكتوب، وهي أساس المساعدين الصوتيين وخدمات التفريغ.",a_en:"Speech recognition converts spoken audio into written text, powering voice assistants and transcription services.",kw:"speech كلام صوت voice"},
+    {q_ar:"ما هو توليد الصور بالذكاء الاصطناعي؟",q_en:"What is AI image generation?",a_ar:"توليد الصور ينشئ صوراً جديدة من وصف نصّي باستخدام نماذج توليدية، ويُستخدم في التصميم والتسويق والإبداع.",a_en:"Image generation creates new images from a text description using generative models, used in design, marketing and creativity.",kw:"image generation توليد صور"},
+    {q_ar:"ما هو تحليل المشاعر؟",q_en:"What is sentiment analysis?",a_ar:"تحليل المشاعر يستخدم معالجة اللغة لتحديد ما إذا كان النص إيجابياً أو سلبياً أو محايداً، ويفيد في قياس رضا العملاء.",a_en:"Sentiment analysis uses language processing to classify text as positive, negative or neutral, useful for measuring customer satisfaction.",kw:"sentiment مشاعر رضا"},
+    {q_ar:"ما هي مجموعة البيانات (Dataset)؟",q_en:"What is a dataset?",a_ar:"مجموعة البيانات هي مجموعة منظّمة من الأمثلة تُستخدم لتدريب نماذج الذكاء الاصطناعي أو اختبارها وتقييمها.",a_en:"A dataset is an organized collection of examples used to train, test or evaluate AI models.",kw:"dataset مجموعة بيانات"},
+    {q_ar:"ما هي أطر عمل الذكاء الاصطناعي؟",q_en:"What are AI frameworks like TensorFlow?",a_ar:"أطر العمل مثل TensorFlow و PyTorch مكتبات جاهزة تسهّل بناء نماذج الذكاء الاصطناعي وتدريبها ونشرها بسرعة.",a_en:"Frameworks like TensorFlow and PyTorch are ready-made libraries that make building, training and deploying AI models faster.",kw:"tensorflow pytorch اطر framework"},
+    {q_ar:"لماذا تُستخدم لغة بايثون في الذكاء الاصطناعي؟",q_en:"Why is Python used for AI?",a_ar:"بايثون هي اللغة الأكثر شيوعاً في الذكاء الاصطناعي لبساطتها وثراء مكتباتها المتخصّصة ومجتمعها الضخم الداعم.",a_en:"Python is the most popular AI language due to its simplicity, rich specialized libraries and huge supportive community.",kw:"python بايثون"},
+    {q_ar:"كيف أبدأ تعلّم الذكاء الاصطناعي؟",q_en:"How do I start learning AI?",a_ar:"ابدأ بأساسيات الرياضيات والإحصاء والبرمجة بلغة بايثون، ثم تعلّم مفاهيم تعلّم الآلة عبر مشاريع عملية تدريجية.",a_en:"Start with math, statistics and Python programming basics, then learn ML concepts through gradual hands-on projects.",kw:"learn ابدا تعلم كيف start"},
+    {q_ar:"ما هو الذكاء الاصطناعي السحابي؟",q_en:"What is cloud AI?",a_ar:"الذكاء الاصطناعي السحابي يتيح استخدام قدرات الذكاء الاصطناعي عبر الإنترنت دون بنية تحتية محلية، ما يقلّل التكلفة ويسهّل التوسّع.",a_en:"Cloud AI lets you use AI capabilities over the internet without local infrastructure, cutting cost and easing scaling.",kw:"cloud سحابي سحابة"},
+    {q_ar:"ما هو الذكاء الاصطناعي الطرفي (Edge AI)؟",q_en:"What is Edge AI?",a_ar:"الذكاء الاصطناعي الطرفي يشغّل النماذج مباشرة على الأجهزة (كالهواتف والحسّاسات) بدل السحابة، ما يقلّل التأخير ويحمي الخصوصية.",a_en:"Edge AI runs models directly on devices (phones, sensors) instead of the cloud, reducing latency and protecting privacy.",kw:"edge طرفي"},
+    {q_ar:"ما هو MLOps؟",q_en:"What is MLOps?",a_ar:"MLOps مجموعة ممارسات لإدارة دورة حياة نماذج تعلّم الآلة من التطوير إلى النشر والمراقبة والتحديث بكفاءة وموثوقية.",a_en:"MLOps is a set of practices for managing the ML model lifecycle from development to deployment, monitoring and updates efficiently.",kw:"mlops"},
+    {q_ar:"لماذا تُستخدم كروت GPU في الذكاء الاصطناعي؟",q_en:"Why are GPUs used for AI?",a_ar:"وحدات معالجة الرسوميات (GPU) تنفّذ عمليات حسابية متوازية ضخمة، ما يسرّع تدريب نماذج الذكاء الاصطناعي بشكل كبير.",a_en:"GPUs perform massive parallel computations, dramatically accelerating the training of AI models.",kw:"gpu كروت معالجة"},
+    {q_ar:"ما هي أبرز اتجاهات الذكاء الاصطناعي؟",q_en:"What are the top AI trends?",a_ar:"من أبرز الاتجاهات: الذكاء التوليدي، والوكلاء المستقلّون، والذكاء متعدّد الوسائط، والحوكمة المسؤولة، ودمج الذكاء في كل قطاع.",a_en:"Key trends include generative AI, autonomous agents, multimodal AI, responsible governance and AI embedded across every sector.",kw:"trends اتجاهات مستقبل 2026"},
+    {q_ar:"ما هو المحوّل (Transformer)؟",q_en:"What is a Transformer?",a_ar:"المحوّل بنية شبكات عصبية أحدثت ثورة في معالجة اللغة عبر آلية الانتباه، وهو الأساس لمعظم النماذج اللغوية الحديثة.",a_en:"A Transformer is a neural network architecture that revolutionized language processing via the attention mechanism, the basis of most modern LLMs.",kw:"transformer محول attention"},
+    {q_ar:"ما هي التضمينات (Embeddings)؟",q_en:"What are embeddings?",a_ar:"التضمينات تمثيلات رقمية للكلمات أو العناصر تحفظ معانيها وعلاقاتها، وتمكّن الأنظمة من قياس التشابه والبحث الدلالي.",a_en:"Embeddings are numeric representations of words or items that preserve meaning and relationships, enabling similarity and semantic search.",kw:"embeddings تضمين"},
+    {q_ar:"ما الفرق بين التصنيف والانحدار؟",q_en:"What's the difference between classification and regression?",a_ar:"التصنيف يتنبّأ بفئة (مثل: بريد مزعج أم لا)، بينما الانحدار يتنبّأ بقيمة رقمية مستمرّة (مثل: سعر أو درجة حرارة).",a_en:"Classification predicts a category (e.g. spam or not), while regression predicts a continuous numeric value (e.g. a price or temperature).",kw:"classification regression تصنيف انحدار"},
+    {q_ar:"ما فوائد الذكاء الاصطناعي للشركات؟",q_en:"What are the benefits of AI for companies?",a_ar:"يرفع الذكاء الاصطناعي الكفاءة، ويخفّض التكاليف، ويحسّن القرارات، ويعزّز تجربة العملاء، ويكشف فرص نموّ جديدة.",a_en:"AI raises efficiency, cuts costs, improves decisions, enhances customer experience and reveals new growth opportunities.",kw:"benefits فوائد كفاءة"},
+
+    // ---------- Company / site (56-100) ----------
+    {q_ar:"من هي شركة XVI Group؟",q_en:"Who is XVI Group?",a_ar:"XVI Group شركة استشارات رائدة في الابتكار والذكاء الاصطناعي وتقنية المعلومات وتطوير المشاريع والدراسات الإدارية، مقرّها العين بالإمارات.",a_en:"XVI Group is a leading consulting firm in innovation, AI, IT, project development and management studies, based in Al Ain, UAE.",kw:"xvi شركة من company about"},
+    {q_ar:"أين يقع مقرّ XVI؟",q_en:"Where is XVI located?",a_ar:"يقع مقرّ XVI Group في مدينة العين بدولة الإمارات العربية المتحدة، مع رؤية عالمية وروح إماراتية.",a_en:"XVI Group is based in Al Ain, United Arab Emirates, with a global vision and an Emirati spirit.",kw:"location مقر مقركم عنوان مكان وين اين العين al ain uae موقع"},
+    {q_ar:"ما الخدمات التي تقدّمها XVI؟",q_en:"What services does XVI offer?",a_ar:"نقدّم أربعة مجالات استشارية متكاملة: الابتكار والذكاء الاصطناعي، وتقنية المعلومات، وتطوير المشاريع، والاستشارات والدراسات الإدارية.",a_en:"We offer four integrated advisory domains: Innovation & AI, Information Technology, Project Development, and Management Consulting & Studies.",kw:"services خدمات خدماتكم خدماتك تقدمون"},
+    {q_ar:"ما هي المجالات الأربعة لـ XVI؟",q_en:"What are XVI's four domains?",a_ar:"مجالاتنا الأربعة هي: الابتكار والذكاء الاصطناعي، وتقنية المعلومات، وتطوير المشاريع، والدراسات والاستشارات الإدارية.",a_en:"Our four domains are: Innovation & AI, Information Technology, Project Development, and Management Consulting & Studies.",kw:"four domains اربعة مجالات"},
+    {q_ar:"ما هي استشارات الابتكار والذكاء الاصطناعي؟",q_en:"What is Innovation & AI consulting?",a_ar:"نساعد مؤسستك على تبنّي الذكاء الاصطناعي بذكاء: من صياغة الاستراتيجية إلى الأتمتة وتعلّم الآلة، لتحويل الأفكار إلى نتائج ملموسة.",a_en:"We help your organization adopt AI wisely: from strategy to automation and machine learning, turning ideas into tangible results.",kw:"innovation ابتكار ai strategy استراتيجية"},
+    {q_ar:"ما هي استشارات تقنية المعلومات؟",q_en:"What is IT consulting at XVI?",a_ar:"نبني بنية رقمية آمنة وقابلة للتوسّع: الحوسبة السحابية، والأمن السيبراني، وتحديث الأنظمة لتسريع تحوّلك الرقمي.",a_en:"We build secure, scalable digital infrastructure: cloud, cybersecurity and systems modernization to accelerate your digital transformation.",kw:"it تقنية معلومات information technology"},
+    {q_ar:"ما هي استشارات تطوير المشاريع؟",q_en:"What is Project Development consulting?",a_ar:"من الفكرة إلى الإطلاق: دراسات جدوى، وإدارة مشاريع، وتحسين أداء لضمان عوائد مستدامة على استثمارك.",a_en:"From idea to launch: feasibility studies, project management and performance optimization to ensure sustainable returns.",kw:"project مشاريع تطوير development"},
+    {q_ar:"ما هي الاستشارات والدراسات الإدارية؟",q_en:"What is Management Consulting & Studies?",a_ar:"نطوّر الهياكل والاستراتيجيات وأنظمة الأداء (KPIs) وتصميم المؤسّسات لرفع كفاءة مؤسستك وتحقيق أهدافها.",a_en:"We develop structures, strategies, performance systems (KPIs) and org design to raise your organization's efficiency and meet its goals.",kw:"management ادارية دراسات consulting studies"},
+    {q_ar:"كيف أحجز استشارة؟",q_en:"How do I book a consultation?",a_ar:"يمكنك الحجز بسهولة عبر تعبئة نموذج التواصل في قسم «تواصل معنا» أسفل الصفحة، وسيتواصل معك فريقنا سريعاً.",a_en:"You can easily book by filling out the form in the 'Contact Us' section at the bottom of the page, and our team will reach out quickly.",kw:"book حجز استشارة consultation موعد"},
+    {q_ar:"هل الاستشارة الأولى مجانية؟",q_en:"Is the first consultation free?",a_ar:"نعم! استشارتك الأولى مجانية — ثلاثون دقيقة تخرج منها بخطوات عملية واضحة لمؤسستك دون أي التزام.",a_en:"Yes! Your first consultation is free — thirty minutes that leave you with clear, practical next steps, with no commitment.",kw:"free مجانية مجاني اول first"},
+    {q_ar:"كيف أتواصل معكم؟",q_en:"How can I contact you?",a_ar:"تواصل معنا عبر نموذج «تواصل معنا» في الموقع؛ فريقنا مستعدّ للإجابة عن أسئلتك ومناقشة احتياجات مؤسستك.",a_en:"Reach us through the 'Contact Us' form on the site; our team is ready to answer your questions and discuss your needs.",kw:"contact تواصل اتصال"},
+    {q_ar:"ما هي منهجية عمل XVI؟",q_en:"What is XVI's methodology?",a_ar:"نعمل عبر خمس مراحل واضحة: الاكتشاف، ثم التحليل، ثم التصميم، ثم التنفيذ، ثم الدعم المستمرّ — منهجية رشيقة من الاستراتيجية إلى التنفيذ.",a_en:"We work through five clear phases: Discover, Analyze, Design, Deliver, then ongoing Support — an agile path from strategy to execution.",kw:"methodology منهجية عملية process approach"},
+    {q_ar:"ماذا تعني مرحلة الاكتشاف؟",q_en:"What is the Discover phase?",a_ar:"في مرحلة الاكتشاف نفهم أهدافك وتحدّياتك وواقع مؤسستك بعمق قبل اقتراح أي حلّ.",a_en:"In the Discover phase we deeply understand your goals, challenges and organizational reality before proposing any solution.",kw:"discover اكتشاف"},
+    {q_ar:"ماذا تعني مرحلة التحليل؟",q_en:"What is the Analyze phase?",a_ar:"في مرحلة التحليل ندرس البيانات والمعطيات لتحديد الفرص والحلول الأنسب المبنيّة على أدلّة لا افتراضات.",a_en:"In the Analyze phase we study data to identify the best opportunities and evidence-based solutions, not assumptions.",kw:"analyze تحليل"},
+    {q_ar:"ماذا تعني مرحلة التصميم؟",q_en:"What is the Design phase?",a_ar:"في مرحلة التصميم نصمّم حلولاً مخصّصة لمؤسستك خطوة بخطوة، مبنيّة على نتائج التحليل.",a_en:"In the Design phase we craft tailored solutions for your organization step by step, based on the analysis findings.",kw:"design تصميم"},
+    {q_ar:"ماذا تعني مرحلة التنفيذ؟",q_en:"What is the Deliver phase?",a_ar:"في مرحلة التنفيذ نحوّل الخطط إلى واقع بسرعة وكفاءة، مع الالتزام بأعلى معايير الجودة.",a_en:"In the Deliver phase we turn plans into reality swiftly and efficiently, upholding the highest quality standards.",kw:"deliver تنفيذ"},
+    {q_ar:"هل تقدّمون دعماً مستمرّاً؟",q_en:"Do you provide ongoing support?",a_ar:"نعم، نرافق مؤسستك بدعم مستمرّ بعد التنفيذ لضمان استدامة النتائج وتحقيق أقصى قيمة على المدى الطويل.",a_en:"Yes, we accompany you with ongoing support after delivery to ensure sustainable results and maximum long-term value.",kw:"support دعم مستمر ongoing"},
+    {q_ar:"لماذا أختار XVI؟",q_en:"Why should I choose XVI?",a_ar:"لأننا نقدّم استشارات مبنيّة على البيانات، وحلولاً مخصّصة لكل عميل، وفريقاً متعدّد التخصّصات، ونتائج عملية قابلة للتنفيذ لا نظريات.",a_en:"Because we deliver data-driven consulting, tailored solutions for every client, a multidisciplinary team and practical, actionable results — not theory.",kw:"why لماذا اختار choose different مميز"},
+    {q_ar:"ما معنى النهج المبني على البيانات؟",q_en:"What does 'data-driven approach' mean?",a_ar:"يعني أن قراراتنا وتوصياتنا مدعومة بالتحليلات والذكاء الاصطناعي لتمنحك ميزة تنافسية حقيقية وقابلة للتطبيق.",a_en:"It means our decisions and recommendations are backed by analytics and AI to give you a real, actionable competitive edge.",kw:"data driven بيانات نهج"},
+    {q_ar:"هل الحلول مخصّصة لكل عميل؟",q_en:"Are solutions tailored to each client?",a_ar:"نعم، لا قوالب جاهزة لدينا؛ كل مشروع فريد ومصمّم خصّيصاً ليناسب احتياجات مؤسستك وأهدافها.",a_en:"Yes, no templates here; every engagement is unique and custom-built to fit your organization's needs and goals.",kw:"tailored مخصص قوالب custom"},
+    {q_ar:"من هو فريق XVI؟",q_en:"Who is the XVI team?",a_ar:"فريقنا خبراء متعدّدو التخصّصات في التقنية والإدارة والابتكار، يجمعون بين الخبرة العالمية والفهم العميق للسوق المحلي.",a_en:"Our team is multidisciplinary experts in technology, management and innovation, blending global expertise with deep local market understanding.",kw:"team فريق خبراء experts"},
+    {q_ar:"ما هي خدمة استراتيجية الذكاء الاصطناعي؟",q_en:"What is the AI Strategy service?",a_ar:"نساعدك على وضع خارطة طريق واضحة لتبنّي الذكاء الاصطناعي بما يخدم أهداف مؤسستك ويحقّق عائداً ملموساً.",a_en:"We help you build a clear roadmap to adopt AI in a way that serves your goals and delivers tangible returns.",kw:"ai strategy استراتيجية ذكاء"},
+    {q_ar:"هل تقدّمون خدمات الأتمتة؟",q_en:"Do you offer automation services?",a_ar:"نعم، نؤتمت العمليات المتكرّرة لتوفير الوقت وخفض التكاليف ورفع الكفاءة التشغيلية في مؤسستك.",a_en:"Yes, we automate repetitive processes to save time, cut costs and raise operational efficiency in your organization.",kw:"automation اتمتة"},
+    {q_ar:"هل تقدّمون حلول تعلّم الآلة؟",q_en:"Do you offer machine learning solutions?",a_ar:"نعم، نبني نماذج تعلّم آلة مخصّصة للتنبؤ والتصنيف والتحليل بما يدعم قرارات مؤسستك بالبيانات.",a_en:"Yes, we build custom machine learning models for prediction, classification and analysis to support your data-driven decisions.",kw:"machine learning تعلم اله حلول"},
+    {q_ar:"هل تقدّمون خدمات الحوسبة السحابية؟",q_en:"Do you offer cloud services?",a_ar:"نعم، نساعدك على الانتقال إلى السحابة وبناء بنية رقمية آمنة وقابلة للتوسّع تسرّع تحوّلك الرقمي.",a_en:"Yes, we help you move to the cloud and build secure, scalable digital infrastructure that accelerates your transformation.",kw:"cloud سحابة سحابية"},
+    {q_ar:"هل تقدّمون خدمات الأمن السيبراني؟",q_en:"Do you offer cybersecurity services?",a_ar:"نعم، نحمي أنظمتك وبياناتك عبر حلول أمن سيبراني حديثة تضمن سلامة بنيتك الرقمية واستمراريتها.",a_en:"Yes, we protect your systems and data with modern cybersecurity solutions that ensure the safety and continuity of your digital infrastructure.",kw:"cybersecurity امن سيبراني حماية"},
+    {q_ar:"هل تساعدون في تحديث الأنظمة؟",q_en:"Do you help with systems modernization?",a_ar:"نعم، نحدّث أنظمتك القديمة ونطوّرها لتصبح أكثر كفاءة وأماناً ومواكبةً لأحدث التقنيات.",a_en:"Yes, we modernize and upgrade your legacy systems to make them more efficient, secure and up to date.",kw:"modernization تحديث انظمة"},
+    {q_ar:"هل تقدّمون دراسات الجدوى؟",q_en:"Do you offer feasibility studies?",a_ar:"نعم، نعدّ دراسات جدوى دقيقة تقيّم قابلية مشروعك للنجاح وعوائده المتوقّعة قبل الانطلاق.",a_en:"Yes, we prepare thorough feasibility studies that assess your project's viability and expected returns before you begin.",kw:"feasibility جدوى دراسات"},
+    {q_ar:"هل تقدّمون إدارة المشاريع؟",q_en:"Do you offer project management?",a_ar:"نعم، ندير مشاريعك باحترافية من التخطيط إلى التسليم لضمان الالتزام بالوقت والميزانية والجودة.",a_en:"Yes, we manage your projects professionally from planning to delivery, ensuring time, budget and quality are met.",kw:"project management ادارة مشاريع"},
+    {q_ar:"ما هي مؤشّرات الأداء (KPIs)؟",q_en:"What about KPIs / performance optimization?",a_ar:"نصمّم مؤشّرات أداء رئيسية (KPIs) ونحسّن الأداء المؤسسي لقياس التقدّم واتخاذ قرارات مبنيّة على نتائج واضحة.",a_en:"We design key performance indicators (KPIs) and optimize organizational performance to measure progress and make results-based decisions.",kw:"kpi kpis مؤشرات اداء optimization"},
+    {q_ar:"هل تقدّمون تصميم الهياكل المؤسسية؟",q_en:"Do you offer org design?",a_ar:"نعم، نصمّم الهياكل التنظيمية بما يوائم بين استراتيجية مؤسستك ومواردها لتحقيق أعلى كفاءة.",a_en:"Yes, we design organizational structures that align your strategy and resources for maximum efficiency.",kw:"org design هيكل تنظيمي"},
+    {q_ar:"هل تقدّمون تدريباً وورش عمل في الذكاء الاصطناعي؟",q_en:"Do you offer AI training and workshops?",a_ar:"نعم، نقدّم برامج تدريب وورش عمل تعرّف فرق مؤسستك بالذكاء الاصطناعي وتطبيقاته العملية لبناء قدراتها الداخلية.",a_en:"Yes, we provide training programs and workshops that familiarize your teams with AI and its practical applications to build internal capabilities.",kw:"training تدريب ورش workshops ورشة تاهيل"},
+    {q_ar:"هل تساعدون في التحوّل الرقمي؟",q_en:"Do you help with digital transformation?",a_ar:"نعم، نقود مؤسستك في رحلة التحوّل الرقمي الكامل عبر دمج التقنية والذكاء الاصطناعي في عملياتها الأساسية.",a_en:"Yes, we lead your organization through a full digital transformation by embedding technology and AI into its core operations.",kw:"digital transformation تحول رقمي"},
+    {q_ar:"هل تخدمون الشركات الصغيرة والناشئة؟",q_en:"Do you serve small businesses and startups?",a_ar:"نعم، نعمل مع المؤسّسات بمختلف أحجامها؛ من الشركات الناشئة إلى الكبرى، بحلول مصمّمة حسب حجمك واحتياجك.",a_en:"Yes, we work with organizations of all sizes, from startups to enterprises, with solutions tailored to your scale and needs.",kw:"small startup صغيرة ناشئة شركات"},
+    {q_ar:"ما القطاعات التي تخدمونها؟",q_en:"Which industries do you serve?",a_ar:"نخدم قطاعات متنوّعة عبر خبرتنا في التقنية والإدارة والابتكار، ونكيّف حلولنا لتناسب طبيعة كل قطاع.",a_en:"We serve diverse industries through our expertise in technology, management and innovation, adapting solutions to each sector's nature.",kw:"industries قطاعات مجالات"},
+    {q_ar:"بأي لغات يتوفّر الموقع؟",q_en:"What languages is the site available in?",a_ar:"موقعنا متاح بالعربية والإنجليزية؛ يمكنك التبديل بينهما من زرّ اللغة في الأعلى، وأنا shamma أردّ بلغتك تلقائياً.",a_en:"Our site is available in Arabic and English; switch using the language button at the top, and I, shamma, reply in your language automatically.",kw:"languages لغة لغات english عربي"},
+    {q_ar:"ما هي أوقات الاستجابة لديكم؟",q_en:"What are your response times?",a_ar:"نحرص على الردّ السريع؛ بمجرّد إرسال نموذج التواصل سيتواصل معك فريقنا في أقرب وقت ممكن.",a_en:"We aim for a fast response; once you submit the contact form, our team will get back to you as soon as possible.",kw:"response hours اوقات استجابة رد"},
+    {q_ar:"كم تكلفة خدماتكم؟",q_en:"How much do your services cost?",a_ar:"تختلف التكلفة حسب نطاق كل مشروع واحتياجاته؛ احجز استشارتك الأولى المجانية لنقدّم لك تصوّراً واضحاً ومخصّصاً.",a_en:"Cost varies by each project's scope and needs; book your free first consultation and we'll give you a clear, tailored estimate.",kw:"cost price سعر تكلفة اسعار pricing"},
+    {q_ar:"كيف يساعد الذكاء الاصطناعي شركتي تحديداً؟",q_en:"How can AI specifically help my company?",a_ar:"في XVI ندرس واقع مؤسستك ونحدّد أين يضيف الذكاء الاصطناعي قيمة حقيقية: أتمتة، تحليل، تنبؤ، أو تحسين تجربة العملاء.",a_en:"At XVI we study your reality and pinpoint where AI adds real value: automation, analytics, prediction or better customer experience.",kw:"help my company شركتي يساعد"},
+    {q_ar:"كيف أبدأ العمل مع XVI؟",q_en:"How do I get started with XVI?",a_ar:"ابدأ بحجز استشارتك الأولى المجانية عبر نموذج التواصل؛ وسنرافقك من الفكرة حتى تحقيق النتائج.",a_en:"Start by booking your free first consultation via the contact form; we'll accompany you from idea to results.",kw:"get started ابدا كيف begin"},
+    {q_ar:"ما الذي يميّز XVI عن غيرها؟",q_en:"What makes XVI different?",a_ar:"يميّزنا الجمع بين الذكاء الاصطناعي المتقدّم والفهم العميق للسوق المحلي، مع حلول مخصّصة ونتائج عملية قابلة للتطبيق.",a_en:"We stand out by combining advanced AI with deep local market understanding, plus tailored solutions and practical, actionable results.",kw:"different يميز مميز unique"},
+    {q_ar:"ما معنى الرؤية المستقبلية لديكم؟",q_en:"What is your future-ready vision?",a_ar:"نبني حلولاً جاهزة للمستقبل تواكب أحدث التقنيات وتضمن أن تبقى مؤسستك في المقدّمة أمام التغيّرات القادمة.",a_en:"We build future-ready solutions that keep pace with the latest technologies and ensure your organization stays ahead of what's next.",kw:"future مستقبل رؤية vision"},
+    {q_ar:"ما رؤية «رؤية عالمية بروح إماراتية»؟",q_en:"What does 'global vision, Emirati spirit' mean?",a_ar:"يعني أننا نمزج بين المعايير والخبرات العالمية والفهم العميق للثقافة والسوق الإماراتي لنقدّم حلولاً تصنع فرقاً حقيقياً.",a_en:"It means we blend global standards and expertise with a deep understanding of Emirati culture and market to deliver solutions that make a real difference.",kw:"global emirati عالمية اماراتية روح"},
+    {q_ar:"من هي shamma؟",q_en:"Who is shamma?",a_ar:"أنا shamma، مساعدتك الذكية في موقع XVI Group! أجيب عن استفساراتك حول الذكاء الاصطناعي وخدمات الشركة وأنشطتها. اسألني ما تشاء 😊",a_en:"I'm shamma, your smart assistant on the XVI Group site! I answer your questions about AI and the company's services and activities. Ask me anything 😊",kw:"shamma شما شمة مساعد who bot"},
+    {q_ar:"ماذا يمكنك أن تفعلي؟",q_en:"What can you do?",a_ar:"يمكنني الإجابة عن أسئلتك حول الذكاء الاصطناعي ومفاهيمه، وعن خدمات XVI ومجالاتها ومنهجيتها وكيفية حجز استشارة. جرّب أن تسألني!",a_en:"I can answer your questions about AI concepts and about XVI's services, domains, methodology and how to book a consultation. Give it a try!",kw:"what can you do ماذا تفعلين تستطيع capabilities"},
+    {q_ar:"شكراً لك",q_en:"Thank you",a_ar:"العفو! سعيدة بمساعدتك دائماً 💜 إن كان لديك أي سؤال آخر عن الذكاء الاصطناعي أو خدمات XVI فأنا هنا.",a_en:"You're welcome! Always happy to help 💜 If you have any other question about AI or XVI's services, I'm here.",kw:"thanks شكرا thank ممتاز رائع"}
+  ];
+
+  /* ===== Greetings ===== */
+  var GREET_KW=["مرحبا","السلام","اهلا","هلا","هاي","صباح","مساء","hi","hello","hey","salam","marhaba"];
+  var greetReply={ar:"أهلاً بك! أنا shamma مساعدة XVI الذكية 💜 كيف أقدر أساعدك اليوم؟ اسألني عن الذكاء الاصطناعي أو خدمات الشركة.",en:"Hello! I'm shamma, XVI's smart assistant 💜 How can I help you today? Ask me about AI or the company's services."};
+
+  /* ===== Utilities ===== */
+  function lang(){return document.body.dataset.lang==='en'?'en':'ar';}
+  function norm(s){
+    return (s||'').toString().toLowerCase()
+      .replace(/[ً-ٰٟ]/g,'')
+      .replace(/[إأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/ؤ/g,'و').replace(/ئ/g,'ي')
+      .replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim();
+  }
+  var STOP=new Set(("ما هو هي ماهو ماهي كيف هل عن على في من الى ايش وش شنو the a an is are what how do you your of to in for about me my i can does و").split(/\s+/));
+  function tokens(s){return norm(s).split(' ').filter(function(t){return t.length>=2&&!STOP.has(t);});}
+
+  function bestMatch(query){
+    var qn=norm(query);
+    var qt=tokens(query);
+    if(!qt.length){
+      if(GREET_KW.some(function(g){return qn.indexOf(norm(g))>-1;})) return {greet:true};
+      return null;
+    }
+    // greeting only
+    if(qt.every(function(t){return GREET_KW.some(function(g){return norm(g)===t;});})) return {greet:true};
+
+    var best=null,bestScore=0;
+    QA.forEach(function(item){
+      var hay=norm(item.q_ar+' '+item.q_en+' '+(item.kw||''));
+      var hayT=new Set(tokens(item.q_ar+' '+item.q_en+' '+(item.kw||'')));
+      var hayArr=Array.from(hayT);
+      var score=0;
+      qt.forEach(function(t){
+        if(hayT.has(t)){score+=2;return;}
+        if(hay.indexOf(t)>-1){score+=1;return;}
+        for(var k=0;k<hayArr.length;k++){var h=hayArr[k];
+          if(h.length>=3&&t.length>=3&&(t.indexOf(h)===0||h.indexOf(t)===0)){score+=1;break;}}
+      });
+      // phrase bonus
+      if(hay.indexOf(qn)>-1 && qn.length>4) score+=3;
+      if(score>bestScore){bestScore=score;best=item;}
+    });
+    if(best && bestScore>=2) return {item:best};
+    if(GREET_KW.some(function(g){return qn.indexOf(norm(g))>-1;})) return {greet:true};
+    return null;
+  }
+
+  /* ===== DOM ===== */
+  var fab=document.getElementById('shammaFab'),
+      panel=document.getElementById('shammaPanel'),
+      closeBtn=document.getElementById('shammaClose'),
+      msgs=document.getElementById('shammaMsgs'),
+      chipsBox=document.getElementById('shammaChips'),
+      input=document.getElementById('shammaInput'),
+      sendBtn=document.getElementById('shammaSend');
+
+  var suggestIdx=[0,1,5,55,58,64,65,72]; // AI, ML, GenAI, who XVI, services, book, free, methodology
+
+  function scrollDown(){msgs.scrollTop=msgs.scrollHeight;}
+
+  function addBot(html){
+    var row=document.createElement('div');row.className='sh-row bot';
+    row.innerHTML='<div class="sh-mini">ش</div><div class="sh-bub">'+html+'</div>';
+    msgs.appendChild(row);scrollDown();
+  }
+  function addUser(text){
+    var row=document.createElement('div');row.className='sh-row user';
+    var b=document.createElement('div');b.className='sh-bub';b.textContent=text;
+    row.appendChild(b);msgs.appendChild(row);scrollDown();
+  }
+  function typing(cb){
+    var row=document.createElement('div');row.className='sh-row bot';
+    row.innerHTML='<div class="sh-mini">ش</div><div class="sh-typing"><span></span><span></span><span></span></div>';
+    msgs.appendChild(row);scrollDown();
+    setTimeout(function(){row.remove();cb();},650);
+  }
+
+  function renderChips(){
+    chipsBox.innerHTML='';
+    var l=lang();
+    suggestIdx.forEach(function(i){
+      var it=QA[i];if(!it)return;
+      var c=document.createElement('button');c.className='sh-chip';
+      c.textContent=l==='en'?it.q_en:it.q_ar;
+      c.addEventListener('click',function(){handle(l==='en'?it.q_en:it.q_ar);});
+      chipsBox.appendChild(c);
+    });
+  }
+
+  function answer(query){
+    var l=lang();
+    var res=bestMatch(query);
+    if(res&&res.greet){addBot(greetReply[l]);return;}
+    if(res&&res.item){addBot(l==='en'?res.item.a_en:res.item.a_ar);return;}
+    addBot(l==='en'
+      ? "I'm not sure I got that. Try asking about AI (e.g. \"What is machine learning?\") or XVI's services, or tap one of the suggestions below. You can also book a free consultation from the Contact section."
+      : "لم أفهم سؤالك تماماً. جرّب أن تسألني عن الذكاء الاصطناعي (مثل: «ما هو تعلّم الآلة؟») أو عن خدمات XVI، أو اختر أحد الاقتراحات بالأسفل. ويمكنك حجز استشارة مجانية من قسم «تواصل معنا».");
+  }
+
+  function handle(text){
+    text=(text||'').trim();if(!text)return;
+    addUser(text);input.value='';
+    typing(function(){answer(text);});
+  }
+
+  var welcomed=false;
+  function welcome(){
+    if(welcomed)return;welcomed=true;
+    var l=lang();
+    addBot(l==='en'
+      ? "Hi 👋 I'm <b>shamma</b>, XVI Group's smart assistant. Ask me anything about <b>Artificial Intelligence</b> or our <b>services and activities</b>. 💜"
+      : "أهلاً 👋 أنا <b>shamma</b>، مساعدة XVI الذكية. اسألني عن <b>الذكاء الاصطناعي</b> أو عن <b>خدمات الشركة وأنشطتها</b>. 💜");
+    renderChips();
+  }
+
+  function openPanel(){document.body.classList.add('shamma-open');welcome();setTimeout(function(){input.focus();},300);}
+  function closePanel(){document.body.classList.remove('shamma-open');}
+
+  fab.addEventListener('click',function(){document.body.classList.contains('shamma-open')?closePanel():openPanel();});
+  closeBtn.addEventListener('click',closePanel);
+  sendBtn.addEventListener('click',function(){handle(input.value);});
+  input.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();handle(input.value);}});
+
+  // Re-render chips + placeholder when language toggles
+  var langBtnEl=document.getElementById('langBtn');
+  if(langBtnEl){langBtnEl.addEventListener('click',function(){setTimeout(function(){
+    var l=lang();input.placeholder=l==='en'?'Type your question…':'اكتب سؤالك هنا…';renderChips();
+  },50);});}
+})();
+</script>
+<!-- ============ /SHAMMA CHATBOT ============ -->
+
 </body>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               </html>
